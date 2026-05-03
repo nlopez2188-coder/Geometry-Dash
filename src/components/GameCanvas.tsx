@@ -1,15 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, GRAVITY, JUMP_FORCE, PLAYER_SIZE, SCROLL_SPEED } from '../constants';
-import { Obstacle, PlayerMode } from '../types';
+import { Level, Obstacle, PlayerMode } from '../types';
 
 interface GameCanvasProps {
   onGameOver: (score: number) => void;
   onScoreUpdate: (score: number) => void;
   isActive: boolean;
   playerColor?: string;
+  level: Level;
 }
 
-export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, playerColor = COLORS.player }: GameCanvasProps) {
+export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, playerColor = COLORS.player, level }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPressingRef = useRef(false);
   const gameStateRef = useRef({
@@ -122,11 +123,11 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
 
       // Scroll obstacles
       state.obstacles.forEach(obs => {
-        obs.x -= SCROLL_SPEED;
+        obs.x -= level.speed;
       });
 
       // Spawn obstacles
-      const spawnRate = state.mode === 'SHIP' ? 1000 : 1500;
+      const spawnRate = state.mode === 'SHIP' ? level.spawnRate * 0.7 : level.spawnRate;
       if (time - state.lastObstacleTime > spawnRate) {
         if (state.mode === 'CUBE') {
           state.obstacles.push({

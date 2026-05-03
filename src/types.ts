@@ -1,10 +1,19 @@
-export type GameState = 'START' | 'PLAYING' | 'GAMEOVER' | 'SHOP';
+export type GameState = 'START' | 'PLAYING' | 'GAMEOVER' | 'SHOP' | 'LEVEL_SELECT';
 export type PlayerMode = 'CUBE' | 'SHIP';
 
 export interface PlayerCustomization {
   color: string;
   name: string;
   cost: number;
+}
+
+export interface Level {
+  id: number;
+  name: string;
+  difficulty: 'Easy' | 'Normal' | 'Hard' | 'Harder' | 'Insane';
+  speed: number;
+  spawnRate: number;
+  color: string;
 }
 
 export interface Entity {

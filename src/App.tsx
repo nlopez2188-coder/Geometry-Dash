@@ -10,10 +10,13 @@ import GameCanvas from './components/GameCanvas';
 import TwitchChat from './components/TwitchChat';
 import AudioEngine from './components/AudioEngine';
 import IconShop from './components/IconShop';
-import { GameState } from './types';
+import LevelSelect from './components/LevelSelect';
+import { GameState, Level } from './types';
+import { LEVELS } from './constants';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>('START');
+  const [selectedLevel, setSelectedLevel] = useState<Level>(LEVELS[0]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('neon-dash-highscore');
@@ -48,9 +51,14 @@ export default function App() {
     setScore(newScore);
   }, []);
 
-  const startGame = useCallback(() => {
+  const handleSelectLevel = (level: Level) => {
+    setSelectedLevel(level);
     setScore(0);
     setGameState('PLAYING');
+  };
+
+  const startGame = useCallback(() => {
+    setGameState('LEVEL_SELECT');
   }, []);
 
   const handleSelectColor = (color: string) => {
@@ -86,6 +94,14 @@ export default function App() {
       <AudioEngine isActive={gameState === 'PLAYING'} score={score} />
       
       <AnimatePresence mode="wait">
+        {gameState === 'LEVEL_SELECT' && (
+          <LevelSelect 
+            onSelect={handleSelectLevel}
+            onBack={() => setGameState('START')}
+            highScore={highScore}
+          />
+        )}
+
         {gameState === 'SHOP' && (
           <IconShop 
             onClose={() => setGameState('START')}
@@ -231,6 +247,7 @@ export default function App() {
           onGameOver={handleGameOver}
           onScoreUpdate={handleScoreUpdate}
           playerColor={playerColor}
+          level={selectedLevel}
         />
       </div>
     </div>
