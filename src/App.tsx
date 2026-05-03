@@ -5,8 +5,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Play, RotateCcw, Smartphone, Zap } from 'lucide-react';
+import { Trophy, Play, RotateCcw, Smartphone, Zap, MessageSquare } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
+import TwitchChat from './components/TwitchChat';
 import { GameState } from './types';
 
 export default function App() {
@@ -79,8 +80,20 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden"
           >
+            {/* Animated Background */}
+            <div className="absolute inset-0 bg-[#050505]" />
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1],
+              }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,rgba(0,255,255,0.1)_0%,transparent_70%)]"
+            />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+
             <div className="relative mb-12">
               <motion.div 
                 animate={{ rotate: 360 }}
@@ -92,10 +105,20 @@ export default function App() {
                 transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
                 className="absolute -inset-8 border border-fuchsia-500/20 rounded-full"
               />
-              <h1 className="text-7xl font-black italic tracking-tighter uppercase neon-glow text-cyan-400 transform -skew-x-12">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full whitespace-nowrap"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 italic">Noe Lopez Edition</span>
+              </motion.div>
+              <h1 className="text-7xl font-black italic tracking-tighter uppercase neon-glow text-cyan-400 transform -skew-x-12 leading-none text-center">
                 NEON<br />DASH
               </h1>
             </div>
+
+            <TwitchChat />
 
             <div className="flex flex-col items-center gap-6">
               <button 
