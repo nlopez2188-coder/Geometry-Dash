@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Play, RotateCcw, Smartphone, Zap, MessageSquare } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import TwitchChat from './components/TwitchChat';
+import AudioEngine from './components/AudioEngine';
 import { GameState } from './types';
 
 export default function App() {
@@ -73,6 +74,7 @@ export default function App() {
 
   return (
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden select-none touch-none">
+      <AudioEngine isActive={gameState === 'PLAYING'} score={score} />
       <AnimatePresence mode="wait">
         {gameState === 'START' && (
           <motion.div 
