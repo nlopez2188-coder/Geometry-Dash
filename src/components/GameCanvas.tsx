@@ -35,15 +35,35 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
   useEffect(() => {
     if (!isActive) return;
 
+    // Reset game state for fresh start
+    gameStateRef.current = {
+      playerY: GAME_HEIGHT - 60 - PLAYER_SIZE,
+      playerVelocity: 0,
+      obstacles: [],
+      score: 0,
+      distance: 0,
+      lastObstacleTime: 0,
+      rotation: 0,
+      isJumping: false,
+      groundY: GAME_HEIGHT - 60,
+    };
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let animationFrameId: number;
+    let startTime: number | null = null;
 
     const gameLoop = (time: number) => {
+      if (!startTime) startTime = time;
       const state = gameStateRef.current;
+
+      // Ensure lastObstacleTime is correctly initialized relative to first frame
+      if (state.lastObstacleTime === 0) {
+        state.lastObstacleTime = time;
+      }
 
       // 1. Update State
       state.playerVelocity += GRAVITY;

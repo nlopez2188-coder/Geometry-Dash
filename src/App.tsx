@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Play, RotateCcw, Smartphone, Zap } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
@@ -29,18 +29,23 @@ export default function App() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleGameOver = (finalScore: number) => {
-    if (finalScore > highScore) {
-      setHighScore(finalScore);
-      localStorage.setItem('neon-dash-highscore', finalScore.toString());
-    }
+  const handleGameOver = useCallback((finalScore: number) => {
+    setHighScore(prev => {
+      const newHigh = Math.max(prev, finalScore);
+      localStorage.setItem('neon-dash-highscore', newHigh.toString());
+      return newHigh;
+    });
     setGameState('GAMEOVER');
-  };
+  }, []);
 
-  const startGame = () => {
+  const handleScoreUpdate = useCallback((newScore: number) => {
+    setScore(newScore);
+  }, []);
+
+  const startGame = useCallback(() => {
     setScore(0);
     setGameState('PLAYING');
-  };
+  }, []);
 
   if (!isMobile) {
     return (
@@ -168,7 +173,7 @@ export default function App() {
         <GameCanvas 
           isActive={gameState === 'PLAYING'} 
           onGameOver={handleGameOver}
-          onScoreUpdate={setScore}
+          onScoreUpdate={handleScoreUpdate}
         />
       </div>
     </div>
