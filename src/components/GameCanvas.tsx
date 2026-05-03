@@ -126,27 +126,68 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
         obs.x -= level.speed;
       });
 
-      // Spawn obstacles
+      // Spawn obstacles with pattern variety
       const spawnRate = state.mode === 'SHIP' ? level.spawnRate * 0.7 : level.spawnRate;
       if (time - state.lastObstacleTime > spawnRate) {
+        const difficultyRoll = Math.random();
+        
         if (state.mode === 'CUBE') {
-          state.obstacles.push({
-            x: GAME_WIDTH,
-            y: state.groundY - 40,
-            width: 40,
-            height: 40,
-            type: Math.random() > 0.5 ? 'spike' : 'block'
-          });
+          // Patterns: Single, Double, Triple Spikes or Blocks
+          if (difficultyRoll > 0.8 && level.id >= 3) {
+            // Triple Spike (Harder)
+            for (let i = 0; i < 3; i++) {
+              state.obstacles.push({
+                x: GAME_WIDTH + (i * 38),
+                y: state.groundY - 40,
+                width: 40,
+                height: 40,
+                type: 'spike'
+              });
+            }
+          } else if (difficultyRoll > 0.6 && level.id >= 2) {
+            // Double block or Stack
+            const isStack = Math.random() > 0.5;
+            if (isStack) {
+              state.obstacles.push({ x: GAME_WIDTH, y: state.groundY - 40, width: 40, height: 40, type: 'block' });
+              state.obstacles.push({ x: GAME_WIDTH, y: state.groundY - 80, width: 40, height: 40, type: 'block' });
+            } else {
+              state.obstacles.push({ x: GAME_WIDTH, y: state.groundY - 40, width: 40, height: 40, type: 'block' });
+              state.obstacles.push({ x: GAME_WIDTH + 45, y: state.groundY - 40, width: 40, height: 40, type: 'block' });
+            }
+          } else {
+            // Standard Single Spike or Block
+            state.obstacles.push({
+              x: GAME_WIDTH,
+              y: state.groundY - 40,
+              width: 40,
+              height: 40,
+              type: Math.random() > 0.3 ? 'spike' : 'block'
+            });
+          }
         } else {
-          // Floating blocks in ship mode
-          const randomY = 50 + Math.random() * (state.groundY - 150);
-          state.obstacles.push({
-            x: GAME_WIDTH,
-            y: randomY,
-            width: 30,
-            height: 80,
-            type: 'block'
-          });
+          // SHIP MODE: Pillars and Ceiling obstacles
+          if (difficultyRoll > 0.7) {
+            // High/Low Pillars
+            const isTop = Math.random() > 0.5;
+            const h = 120 + Math.random() * 80;
+            state.obstacles.push({
+              x: GAME_WIDTH,
+              y: isTop ? 0 : state.groundY - h,
+              width: 50,
+              height: h,
+              type: 'block'
+            });
+          } else {
+            // Floating blocks chain
+            const midY = 100 + Math.random() * (state.groundY - 200);
+            state.obstacles.push({
+              x: GAME_WIDTH,
+              y: midY,
+              width: 40,
+              height: 120,
+              type: 'block'
+            });
+          }
         }
         state.lastObstacleTime = time;
       }
@@ -202,7 +243,7 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
       // Draw Ground
       ctx.fillStyle = COLORS.ground;
       ctx.fillRect(0, state.groundY, GAME_WIDTH, GAME_HEIGHT - state.groundY);
-      ctx.strokeStyle = state.mode === 'SHIP' ? '#ff0055' : COLORS.accent;
+      ctx.strokeStyle = level.color;
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(0, state.groundY);
@@ -211,7 +252,7 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
 
       // Draw Obstacles
       state.obstacles.forEach(obs => {
-        ctx.fillStyle = COLORS.obstacle;
+        ctx.fillStyle = level.color;
         if (obs.type === 'spike') {
           ctx.beginPath();
           ctx.moveTo(obs.x, obs.y + obs.height);
@@ -220,7 +261,7 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
           ctx.closePath();
           ctx.fill();
           ctx.shadowBlur = 15;
-          ctx.shadowColor = COLORS.obstacle;
+          ctx.shadowColor = level.color;
           ctx.stroke();
           ctx.shadowBlur = 0;
         } else {
@@ -228,6 +269,11 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, player
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = 2;
           ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+          // Glow for blocks too
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = level.color;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
         }
       });
 
