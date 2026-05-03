@@ -6,9 +6,10 @@ interface GameCanvasProps {
   onGameOver: (score: number) => void;
   onScoreUpdate: (score: number) => void;
   isActive: boolean;
+  playerColor?: string;
 }
 
-export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: GameCanvasProps) {
+export default function GameCanvas({ onGameOver, onScoreUpdate, isActive, playerColor = COLORS.player }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPressingRef = useRef(false);
   const gameStateRef = useRef({
@@ -235,8 +236,8 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       ctx.rotate((state.rotation * Math.PI) / 180);
       
       ctx.shadowBlur = 20;
-      ctx.shadowColor = COLORS.player;
-      ctx.fillStyle = COLORS.player;
+      ctx.shadowColor = playerColor;
+      ctx.fillStyle = playerColor;
 
       if (state.mode === 'CUBE') {
         // Outer square

@@ -1,5 +1,11 @@
-export type GameState = 'START' | 'PLAYING' | 'GAMEOVER';
+export type GameState = 'START' | 'PLAYING' | 'GAMEOVER' | 'SHOP';
 export type PlayerMode = 'CUBE' | 'SHIP';
+
+export interface PlayerCustomization {
+  color: string;
+  name: string;
+  cost: number;
+}
 
 export interface Entity {
   x: number;

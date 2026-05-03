@@ -5,10 +5,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Play, RotateCcw, Smartphone, Zap, MessageSquare } from 'lucide-react';
+import { Trophy, Play, RotateCcw, Smartphone, Zap, MessageSquare, ShoppingBag } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import TwitchChat from './components/TwitchChat';
 import AudioEngine from './components/AudioEngine';
+import IconShop from './components/IconShop';
 import { GameState } from './types';
 
 export default function App() {
@@ -17,6 +18,9 @@ export default function App() {
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('neon-dash-highscore');
     return saved ? parseInt(saved, 10) : 0;
+  });
+  const [playerColor, setPlayerColor] = useState(() => {
+    return localStorage.getItem('neon-dash-player-color') || '#00ffff';
   });
   const [isMobile, setIsMobile] = useState(false);
 
@@ -49,6 +53,11 @@ export default function App() {
     setGameState('PLAYING');
   }, []);
 
+  const handleSelectColor = (color: string) => {
+    setPlayerColor(color);
+    localStorage.setItem('neon-dash-player-color', color);
+  };
+
   if (!isMobile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 text-white p-6 text-center">
@@ -75,7 +84,17 @@ export default function App() {
   return (
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden select-none touch-none">
       <AudioEngine isActive={gameState === 'PLAYING'} score={score} />
+      
       <AnimatePresence mode="wait">
+        {gameState === 'SHOP' && (
+          <IconShop 
+            onClose={() => setGameState('START')}
+            selectedColor={playerColor}
+            onSelectColor={handleSelectColor}
+            highScore={highScore}
+          />
+        )}
+
         {gameState === 'START' && (
           <motion.div 
             key="start"
@@ -130,11 +149,23 @@ export default function App() {
                 <Play className="w-10 h-10 text-black fill-current ml-1" />
               </button>
               
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Best Score</span>
-                <div className="flex items-center gap-2 text-2xl font-bold text-fuchsia-400">
-                  <Trophy className="w-5 h-5" />
-                  {highScore}
+              <div className="flex flex-row gap-6 items-center">
+                <button 
+                  onClick={() => setGameState('SHOP')}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-active:scale-90 transition-transform">
+                    <ShoppingBag className="w-5 h-5 text-fuchsia-400" />
+                  </div>
+                  <span className="text-[8px] uppercase tracking-widest text-neutral-500">Shop</span>
+                </button>
+
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Best Score</span>
+                  <div className="flex items-center gap-2 text-2xl font-bold text-fuchsia-400">
+                    <Trophy className="w-5 h-5" />
+                    {highScore}
+                  </div>
                 </div>
               </div>
             </div>
@@ -199,6 +230,7 @@ export default function App() {
           isActive={gameState === 'PLAYING'} 
           onGameOver={handleGameOver}
           onScoreUpdate={handleScoreUpdate}
+          playerColor={playerColor}
         />
       </div>
     </div>
