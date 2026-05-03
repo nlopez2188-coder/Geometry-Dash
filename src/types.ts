@@ -1,4 +1,5 @@
 export type GameState = 'START' | 'PLAYING' | 'GAMEOVER';
+export type PlayerMode = 'CUBE' | 'SHIP';
 
 export interface Entity {
   x: number;

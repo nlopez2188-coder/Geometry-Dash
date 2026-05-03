@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, GRAVITY, JUMP_FORCE, PLAYER_SIZE, SCROLL_SPEED } from '../constants';
-import { Obstacle } from '../types';
+import { Obstacle, PlayerMode } from '../types';
 
 interface GameCanvasProps {
   onGameOver: (score: number) => void;
@@ -10,6 +10,7 @@ interface GameCanvasProps {
 
 export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isPressingRef = useRef(false);
   const gameStateRef = useRef({
     playerY: GAME_HEIGHT / 2,
     playerVelocity: 0,
@@ -20,16 +21,22 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
     rotation: 0,
     isJumping: false,
     groundY: GAME_HEIGHT - 60,
+    mode: 'CUBE' as PlayerMode,
   });
 
-  const jump = () => {
+  const handlePressStart = () => {
+    isPressingRef.current = true;
     if (!isActive) return;
     const state = gameStateRef.current;
-    // Only jump if on ground (typical Geometry Dash mechanic)
-    if (state.playerY >= state.groundY - PLAYER_SIZE) {
+    
+    if (state.mode === 'CUBE' && state.playerY >= state.groundY - PLAYER_SIZE) {
       state.playerVelocity = JUMP_FORCE;
       state.isJumping = true;
     }
+  };
+
+  const handlePressEnd = () => {
+    isPressingRef.current = false;
   };
 
   useEffect(() => {
@@ -42,10 +49,11 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       obstacles: [],
       score: 0,
       distance: 0,
-      lastObstacleTime: 0,
+      lastObstacleTime: 100,
       rotation: 0,
       isJumping: false,
       groundY: GAME_HEIGHT - 60,
+      mode: 'CUBE',
     };
 
     const canvas = canvasRef.current;
@@ -61,12 +69,27 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       const state = gameStateRef.current;
 
       // Ensure lastObstacleTime is correctly initialized relative to first frame
-      if (state.lastObstacleTime === 0) {
+      if (state.lastObstacleTime === 100) {
         state.lastObstacleTime = time;
       }
 
+      // 0. Mode Transition Check
+      if (state.score >= 5 && state.mode === 'CUBE') {
+        state.mode = 'SHIP';
+        state.isJumping = true; // Use this to differentiate first jump
+      }
+
       // 1. Update State
-      state.playerVelocity += GRAVITY;
+      if (state.mode === 'CUBE') {
+        state.playerVelocity += GRAVITY;
+      } else {
+        // Ship Mode Physics: Hold to fly UP (negative velocity)
+        const thrust = isPressingRef.current ? -0.8 : 0.6;
+        state.playerVelocity += thrust;
+        // Limit velocity
+        state.playerVelocity = Math.max(Math.min(state.playerVelocity, 6), -6);
+      }
+      
       state.playerY += state.playerVelocity;
 
       // Ground collision
@@ -74,13 +97,26 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
         state.playerY = state.groundY - PLAYER_SIZE;
         state.playerVelocity = 0;
         state.isJumping = false;
-        // Snap rotation when hitting ground
-        state.rotation = Math.round(state.rotation / 90) * 90;
+        // Snap rotation when hitting ground (Cube only)
+        if (state.mode === 'CUBE') {
+          state.rotation = Math.round(state.rotation / 90) * 90;
+        }
       }
 
-      // Rotate while jumping
-      if (state.isJumping) {
-        state.rotation += 5;
+      // Ceiling collision (Ship only)
+      if (state.mode === 'SHIP' && state.playerY < 0) {
+        state.playerY = 0;
+        state.playerVelocity = 0;
+      }
+
+      // Rotate player
+      if (state.mode === 'CUBE') {
+        if (state.isJumping) {
+          state.rotation += 5;
+        }
+      } else {
+        // Ship tilts based on velocity
+        state.rotation = state.playerVelocity * 5;
       }
 
       // Scroll obstacles
@@ -89,14 +125,27 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       });
 
       // Spawn obstacles
-      if (time - state.lastObstacleTime > 1500) {
-        state.obstacles.push({
-          x: GAME_WIDTH,
-          y: state.groundY - 40,
-          width: 40,
-          height: 40,
-          type: Math.random() > 0.5 ? 'spike' : 'block'
-        });
+      const spawnRate = state.mode === 'SHIP' ? 1000 : 1500;
+      if (time - state.lastObstacleTime > spawnRate) {
+        if (state.mode === 'CUBE') {
+          state.obstacles.push({
+            x: GAME_WIDTH,
+            y: state.groundY - 40,
+            width: 40,
+            height: 40,
+            type: Math.random() > 0.5 ? 'spike' : 'block'
+          });
+        } else {
+          // Floating blocks in ship mode
+          const randomY = 50 + Math.random() * (state.groundY - 150);
+          state.obstacles.push({
+            x: GAME_WIDTH,
+            y: randomY,
+            width: 30,
+            height: 80,
+            type: 'block'
+          });
+        }
         state.lastObstacleTime = time;
       }
 
@@ -116,8 +165,7 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       };
 
       for (const obs of state.obstacles) {
-        // Simple AABB collision with a bit of padding for spike
-        const padding = obs.type === 'spike' ? 10 : 2;
+        const padding = obs.type === 'spike' ? 12 : 4;
         if (
           playerBox.x < obs.x + obs.width - padding &&
           playerBox.x + playerBox.width > obs.x + padding &&
@@ -129,14 +177,13 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
         }
       }
 
-      // Draw Progress/HUD Info (optional secondary display)
-      
       // 2. Render
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
       // Background pulse
+      const pulseColor = state.mode === 'SHIP' ? '255, 0, 85' : '112, 0, 255';
       const pulse = Math.sin(time / 1000) * 0.05 + 0.05;
-      ctx.fillStyle = `rgba(112, 0, 255, ${pulse})`;
+      ctx.fillStyle = `rgba(${pulseColor}, ${pulse})`;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
       // Background lines for speed feel
@@ -153,7 +200,7 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       // Draw Ground
       ctx.fillStyle = COLORS.ground;
       ctx.fillRect(0, state.groundY, GAME_WIDTH, GAME_HEIGHT - state.groundY);
-      ctx.strokeStyle = COLORS.accent;
+      ctx.strokeStyle = state.mode === 'SHIP' ? '#ff0055' : COLORS.accent;
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(0, state.groundY);
@@ -170,7 +217,6 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
           ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
           ctx.closePath();
           ctx.fill();
-          // Glow
           ctx.shadowBlur = 15;
           ctx.shadowColor = COLORS.obstacle;
           ctx.stroke();
@@ -188,19 +234,49 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
       ctx.translate(100 + PLAYER_SIZE / 2, state.playerY + PLAYER_SIZE / 2);
       ctx.rotate((state.rotation * Math.PI) / 180);
       
-      // Outer square
-      ctx.fillStyle = COLORS.player;
       ctx.shadowBlur = 20;
       ctx.shadowColor = COLORS.player;
-      ctx.fillRect(-PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
-      
-      // Inner detail
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(-PLAYER_SIZE / 3, -PLAYER_SIZE / 3, (PLAYER_SIZE * 2) / 3, (PLAYER_SIZE * 2) / 3);
+      ctx.fillStyle = COLORS.player;
+
+      if (state.mode === 'CUBE') {
+        // Outer square
+        ctx.fillRect(-PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
+        // Inner detail
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(-PLAYER_SIZE / 3, -PLAYER_SIZE / 3, (PLAYER_SIZE * 2) / 3, (PLAYER_SIZE * 2) / 3);
+      } else {
+        // Ship/Rocket Shape
+        ctx.beginPath();
+        ctx.moveTo(-PLAYER_SIZE/2, 0);
+        ctx.lineTo(PLAYER_SIZE/2, -PLAYER_SIZE/4);
+        ctx.lineTo(PLAYER_SIZE/2, PLAYER_SIZE/4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Rocket detail
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, -PLAYER_SIZE/8, PLAYER_SIZE/4, PLAYER_SIZE/4);
+
+        // Thruster flame if pressing
+        if (isPressingRef.current) {
+          ctx.fillStyle = '#ffa500';
+          ctx.beginPath();
+          ctx.moveTo(-PLAYER_SIZE/2, 0);
+          ctx.lineTo(-PLAYER_SIZE * 0.8, Math.random() * 10 - 5);
+          ctx.fill();
+        }
+      }
       
       ctx.restore();
+
+      // Portal Transition Effect
+      if (state.score === 5 && (Math.floor(time / 200) % 2 === 0)) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      }
 
       animationFrameId = requestAnimationFrame(gameLoop);
     };
@@ -213,8 +289,11 @@ export default function GameCanvas({ onGameOver, onScoreUpdate, isActive }: Game
   return (
     <div 
       className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden"
-      onTouchStart={jump}
-      onMouseDown={jump}
+      onTouchStart={handlePressStart}
+      onTouchEnd={handlePressEnd}
+      onMouseDown={handlePressStart}
+      onMouseUp={handlePressEnd}
+      onMouseLeave={handlePressEnd}
     >
       <canvas
         ref={canvasRef}
